@@ -1,12 +1,11 @@
-use diesel::table;
+// @generated automatically by Diesel CLI.
 
-table! {
-    bookmarks (id) {
+diesel::table! {
+    bookmarks {
         id -> Text,
         url -> Text,
         title -> Text,
         description -> Text,
-        // created_at -> Timestamp,
-        // tags -> Array<Int4>,
+        tags -> Text,
     }
 }
