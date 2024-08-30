@@ -12,7 +12,7 @@ pub struct Bookmark {
     pub description: String,
     pub tags: String,
     // pub created_at: chrono::NaiveDateTime,
-    // pub tags: Vec<i32>,
+    // pub tags: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Selectable, Queryable, Insertable, AsChangeset)]

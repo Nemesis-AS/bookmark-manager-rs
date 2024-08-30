@@ -2,10 +2,15 @@ use actix_web::{error, web, HttpResponse, Responder};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
-use crate::db::models;
+use crate::db::models::{self, Bookmark};
 use crate::db::types::{DbError, DbPool};
 
 use super::JsonResponse;
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct TagFilterList {
+    tags: String,
+}
 
 async fn get_all_bookmarks(pool: web::Data<DbPool>) -> actix_web::Result<impl Responder> {
     let bookmarks = web::block(move || -> Result<Vec<models::Bookmark>, DbError> {
@@ -57,8 +62,41 @@ async fn get_bookmark_by_id(
     Ok(HttpResponse::Ok().json(res))
 }
 
-async fn filter_bookmarks_by_tag() -> impl Responder {
-    HttpResponse::Ok().body("[WIP] Filter bookmarks by tag")
+async fn filter_bookmarks_by_tag(
+    pool: web::Data<DbPool>,
+    query: web::Query<TagFilterList>,
+) -> actix_web::Result<impl Responder> {
+    let tag_str: String = query.into_inner().tags;
+    let filter_tags: Vec<Uuid> = tag_str
+        .split(",")
+        .map(|str| Uuid::parse_str(&str).unwrap())
+        .collect::<Vec<Uuid>>();
+
+    let bookmarks = web::block(move || -> Result<Vec<Bookmark>, DbError> {
+        use crate::db::schema::bookmarks::dsl::*;
+        
+        let mut conn = pool.get()?;
+
+        let res: Vec<Bookmark> = bookmarks.load::<models::Bookmark>(&mut conn)?;
+
+        let out: Vec<Bookmark> = res.into_iter().filter(|b| {
+            let bookmark_tags: Vec<Uuid> = b.tags
+                .split(",")
+                .map(|str| Uuid::parse_str(&str).unwrap())
+                .collect::<Vec<Uuid>>();
+
+            filter_tags.iter().all(|tag| bookmark_tags.contains(tag))
+        }).collect::<Vec<Bookmark>>();
+
+        Ok(out)
+    }).await?.map_err(error::ErrorInternalServerError)?;
+
+    let res: JsonResponse = JsonResponse {
+        success: true,
+        message: "Filtered Bookmark Successfully".to_string(),
+        data: Some(serde_json::to_value(bookmarks).unwrap()),
+    };
+    Ok(HttpResponse::Ok().json(res))
 }
 
 async fn create_bookmark(
@@ -119,17 +157,21 @@ async fn update_bookmark(
     Ok(HttpResponse::Ok().json(bookmark))
 }
 
-async fn delete_bookmark(pool: web::Data<DbPool>, uid: web::Path<Uuid>) -> actix_web::Result<impl Responder> {
-
+async fn delete_bookmark(
+    pool: web::Data<DbPool>,
+    uid: web::Path<Uuid>,
+) -> actix_web::Result<impl Responder> {
     web::block(move || -> Result<(), DbError> {
         use crate::db::schema::bookmarks::dsl::*;
-        
+
         let mut conn = pool.get()?;
 
         diesel::delete(bookmarks.filter(id.eq(uid.into_inner().to_string()))).execute(&mut conn)?;
 
         Ok(())
-    }).await?.map_err(error::ErrorInternalServerError)?;
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?;
 
     let res: JsonResponse = JsonResponse {
         success: true,
@@ -146,10 +188,10 @@ pub fn register(config: &mut actix_web::web::ServiceConfig) {
             .route(web::post().to(create_bookmark))
             .route(web::put().to(update_bookmark)),
     );
+    config.service(web::resource("/bytag").route(web::get().to(filter_bookmarks_by_tag)));
     config.service(
         web::resource("/{uid}")
             .route(web::get().to(get_bookmark_by_id))
             .route(web::delete().to(delete_bookmark)),
     );
-    config.service(web::resource("/tag/{tag}").route(web::get().to(filter_bookmarks_by_tag)));
 }
