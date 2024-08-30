@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    bookmarks {
+    bookmarks (id) {
         id -> Text,
         url -> Text,
         title -> Text,
@@ -9,3 +9,15 @@ diesel::table! {
         tags -> Text,
     }
 }
+
+diesel::table! {
+    tags (id) {
+        id -> Text,
+        title -> Text,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    bookmarks,
+    tags,
+);
