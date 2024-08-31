@@ -2,9 +2,9 @@ use actix_web::{
     web::{self, Data, Json, Path, ServiceConfig},
     HttpResponse, Responder,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 
-use crate::db::models::{NewTag, Tag};
+use crate::db::models::{Bookmark, NewTag, Tag};
 use crate::db::types::{DbError, DbPool};
 
 use super::JsonResponse;
@@ -86,12 +86,51 @@ async fn update_tag(pool: Data<DbPool>, data: Json<Tag>) -> actix_web::Result<im
 }
 
 async fn delete_tag(pool: Data<DbPool>, uid: Path<Uuid>) -> actix_web::Result<impl Responder> {
+    let tag = uid.into_inner();
+    // @todo! Find an alternative to pass the same pool to different closures or find a way to do both the operations inside a single web::block closure
+    let pool2 = pool.clone();
+
+    web::block(move || -> Result<(), DbError> {
+        use crate::db::schema::bookmarks::dsl::*;
+
+        let mut conn = pool2.get()?;
+        let match_string = "%".to_owned() + &tag.to_string() + "%";
+
+        let res: Vec<Bookmark> = bookmarks
+            .filter(tags.like(match_string))
+            .load::<Bookmark>(&mut conn)?;
+        println!("{:?}", &res);
+
+        for row in res.iter() {
+            let tag_str: String = tag.to_string();
+
+            let new_tags: String = row
+                .tags
+                .clone()
+                .replace(&tag_str, "")
+                .replace(",,", ",")
+                .trim_matches(',')
+                .to_string();
+
+            let mut updated_bookmark: Bookmark = row.to_owned();
+            updated_bookmark.tags = new_tags;
+
+            diesel::update(bookmarks.find(&updated_bookmark.id))
+                .set(&updated_bookmark)
+                .execute(&mut conn)?;
+        }
+
+        Ok(())
+    })
+    .await?
+    .map_err(actix_web::error::ErrorInternalServerError)?;
+
     web::block(move || -> Result<(), DbError> {
         use crate::db::schema::tags::dsl::*;
 
         let mut conn = pool.get()?;
 
-        diesel::delete(tags.filter(id.eq(uid.into_inner().to_string()))).execute(&mut conn)?;
+        diesel::delete(tags.filter(id.eq(tag.to_string()))).execute(&mut conn)?;
 
         Ok(())
     })
