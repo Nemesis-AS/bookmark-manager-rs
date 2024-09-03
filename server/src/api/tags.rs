@@ -41,6 +41,8 @@ async fn create_tag(pool: Data<DbPool>, data: Json<NewTag>) -> actix_web::Result
         let new_tag = Tag {
             id: Uuid::new_v4().to_string(),
             title: data.title.clone(),
+            color: data.color.clone(),
+            created_at: None
         };
 
         diesel::insert_into(tags)

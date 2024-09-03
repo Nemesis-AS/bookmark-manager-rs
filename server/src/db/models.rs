@@ -11,7 +11,7 @@ pub struct Bookmark {
     pub title: String,
     pub description: String,
     pub tags: String,
-    // pub created_at: chrono::NaiveDateTime,
+    pub created_at: Option<chrono::NaiveDateTime>,
     // pub tags: String,
 }
 
@@ -29,10 +29,13 @@ pub struct NewBookmark {
 pub struct Tag {
     pub id: String,
     pub title: String,
+    pub color: String,
+    pub created_at: Option<chrono::NaiveDateTime>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Selectable, Queryable, Insertable, AsChangeset)]
 #[diesel(table_name = tags)]
 pub struct NewTag {
     pub title: String,
+    pub color: String
 }

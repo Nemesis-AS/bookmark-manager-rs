@@ -1,8 +1,8 @@
 CREATE TABLE bookmarks (
-  id Text PRIMARY KEY,
+  id Text PRIMARY KEY NOT NULL,
   url TEXT NOT NULL,
   title TEXT NOT NULL,
   description Text NOT NULL,
-  tags TEXT NOT NULL DEFAULT ""
---   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  tags TEXT NOT NULL DEFAULT "",
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )

@@ -7,6 +7,7 @@ diesel::table! {
         title -> Text,
         description -> Text,
         tags -> Text,
+        created_at -> Nullable<Timestamp>,
     }
 }
 
@@ -14,6 +15,8 @@ diesel::table! {
     tags (id) {
         id -> Text,
         title -> Text,
+        color -> Text,
+        created_at -> Nullable<Timestamp>,
     }
 }
 

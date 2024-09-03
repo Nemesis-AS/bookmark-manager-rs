@@ -1,8 +1,8 @@
 -- Your SQL goes here
 CREATE TABLE tags (
-    id Text NOT NULL PRIMARY KEY,
-    title Text NOT NULL
+    id Text NOT NULL PRIMARY KEY NOT NULL,
+    title Text NOT NULL,
     -- icon,
-    -- color,
-    -- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    color Text NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )

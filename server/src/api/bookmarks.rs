@@ -114,6 +114,7 @@ async fn create_bookmark(
             title: data.title.clone(),
             description: data.description.clone(),
             tags: data.tags.clone(),
+            created_at: None
         };
 
         diesel::insert_into(bookmarks)
