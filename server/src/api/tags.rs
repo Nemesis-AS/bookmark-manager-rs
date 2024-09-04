@@ -1,5 +1,5 @@
 use actix_web::{
-    web::{self, Data, Json, Path, ServiceConfig},
+    web::{self, Data, Json, Path, Query, ServiceConfig},
     HttpResponse, Responder,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
@@ -7,17 +7,28 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use crate::db::models::{Bookmark, NewTag, Tag};
 use crate::db::types::{DbError, DbPool};
 
-use super::JsonResponse;
+use super::{JsonResponse, PaginationQuery};
 
 use uuid::Uuid;
 
-async fn get_all_tags(pool: Data<DbPool>) -> actix_web::Result<impl Responder> {
+async fn get_all_tags(
+    pool: Data<DbPool>,
+    query: Query<PaginationQuery>,
+) -> actix_web::Result<impl Responder> {
+    let query_params: PaginationQuery = query.into_inner();
+    let limit: i64 = query_params.limit.unwrap_or(25);
+    let offset: i64 = (query_params.page.unwrap_or(1) - 1) * limit;
+
     let tags = web::block(move || -> Result<Vec<Tag>, DbError> {
         use crate::db::schema::tags::dsl::*;
 
         let mut conn = pool.get()?;
 
-        let res: Vec<Tag> = tags.load(&mut conn)?;
+        let res: Vec<Tag> = tags
+            .order(created_at)
+            .limit(limit)
+            .offset(offset)
+            .load(&mut conn)?;
 
         Ok(res)
     })
@@ -28,6 +39,8 @@ async fn get_all_tags(pool: Data<DbPool>) -> actix_web::Result<impl Responder> {
         success: true,
         message: "Tags retrieved successfully".to_string(),
         data: Some(serde_json::to_value(tags).unwrap()),
+        page: Some(query_params.page.unwrap_or(1)),
+        limit: Some(limit),
     };
     Ok(HttpResponse::Ok().json(res))
 }
@@ -42,7 +55,7 @@ async fn create_tag(pool: Data<DbPool>, data: Json<NewTag>) -> actix_web::Result
             id: Uuid::new_v4().to_string(),
             title: data.title.clone(),
             color: data.color.clone(),
-            created_at: None
+            created_at: None,
         };
 
         diesel::insert_into(tags)
@@ -58,6 +71,8 @@ async fn create_tag(pool: Data<DbPool>, data: Json<NewTag>) -> actix_web::Result
         success: true,
         message: "Tag created successfully".to_string(),
         data: Some(serde_json::to_value(new_tag).unwrap()),
+        page: None,
+        limit: None,
     };
     Ok(HttpResponse::Ok().json(res))
 }
@@ -83,6 +98,8 @@ async fn update_tag(pool: Data<DbPool>, data: Json<Tag>) -> actix_web::Result<im
         success: true,
         message: "Updated Tag successfully".to_string(),
         data: Some(serde_json::to_value(updated_tag).unwrap()),
+        page: None,
+        limit: None,
     };
     Ok(HttpResponse::Ok().json(res))
 }
@@ -143,6 +160,8 @@ async fn delete_tag(pool: Data<DbPool>, uid: Path<Uuid>) -> actix_web::Result<im
         success: true,
         message: "Deleted Tag Successfully".to_string(),
         data: None,
+        page: None,
+        limit: None,
     };
     Ok(HttpResponse::Ok().json(res))
 }

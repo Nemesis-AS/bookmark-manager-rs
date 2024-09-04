@@ -11,6 +11,14 @@ pub struct JsonResponse {
     pub success: bool,
     pub message: String,
     pub data: Option<serde_json::Value>,
+    pub page: Option<i64>,
+    pub limit: Option<i64>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct PaginationQuery {
+    pub page: Option<i64>,
+    pub limit: Option<i64>,
 }
 
 pub fn register(config: &mut web::ServiceConfig) {
