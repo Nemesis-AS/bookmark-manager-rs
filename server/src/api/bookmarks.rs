@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Query},
     HttpResponse, Responder,
 };
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use uuid::Uuid;
 
 use crate::db::models::{self, Bookmark};
@@ -29,7 +29,10 @@ async fn get_all_bookmarks(
 
         let mut conn = pool.get()?;
 
+        let term: String = query_params.term.clone().unwrap_or("".to_string());
+
         let res: Vec<models::Bookmark> = bookmarks
+            .filter(title.like(format!("%{}%", term)))
             .order(created_at.desc())
             .limit(limit)
             .offset(offset)

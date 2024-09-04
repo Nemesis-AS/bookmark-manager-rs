@@ -24,7 +24,10 @@ async fn get_all_tags(
 
         let mut conn = pool.get()?;
 
+        let term: String = query_params.term.clone().unwrap_or("".to_string());
+
         let res: Vec<Tag> = tags
+            .filter(title.like(format!("%{}%", term)))
             .order(created_at)
             .limit(limit)
             .offset(offset)

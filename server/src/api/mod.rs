@@ -19,6 +19,7 @@ pub struct JsonResponse {
 pub struct PaginationQuery {
     pub page: Option<i64>,
     pub limit: Option<i64>,
+    pub term: Option<String>,
 }
 
 pub fn register(config: &mut web::ServiceConfig) {
