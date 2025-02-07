@@ -22,7 +22,7 @@ The server is the core of the app and contains the actual functionality of manag
 
 ### Browser Extension (`extension/`)
 
-\[WIP\] The extensions will allow the users to export/import their bookmarks and also add and access the bookmarks easily.\
+\[WIP\] The extensions will allow the users to export/import their bookmarks and also add and access the bookmarks easily.
 
 ### Frontend
 \[Planned\] A web Interface is also planned to be bundled with the **server** to allow the users to manage their bookmarks without the need of an extension.
@@ -32,6 +32,7 @@ The server is the core of the app and contains the actual functionality of manag
 ### Prerequisites
 
 -   Rust (latest stable version)
+-   Diesel CLI
 
 ### Running the Server Locally
 
@@ -51,6 +52,17 @@ The server is the core of the app and contains the actual functionality of manag
     ```
 
     A `.env.example` file has been provided. Just fill in the data and rename it to `.env`
+
+3. Install Diesel CLI (if already installed, skip this step): \
+    FIrst, we need `binstall` to install the binary directly.
+    ```sh
+    cargo install binstall
+    ```
+
+    Next, we can directly fetch and install the diesel CLI binaries without building them
+    ```sh  
+    cargo binstall diesel
+    ```
 
 3. Run the database migrations:
 
