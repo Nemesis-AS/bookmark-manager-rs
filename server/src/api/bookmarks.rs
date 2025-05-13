@@ -14,6 +14,8 @@ use super::{JsonResponse, PaginationQuery};
 #[derive(Debug, Clone, serde::Deserialize)]
 struct TagFilterList {
     tags: String,
+    page: Option<i64>,
+    limit: Option<i64>,
 }
 
 async fn get_all_bookmarks(
@@ -88,20 +90,24 @@ async fn filter_bookmarks_by_tag(
     pool: web::Data<DbPool>,
     query: web::Query<TagFilterList>,
 ) -> actix_web::Result<impl Responder> {
-    let tag_str: String = query.into_inner().tags;
+    let query_params: TagFilterList = query.into_inner();
+    let tag_str: String = query_params.tags;
     let filter_tags: Vec<Uuid> = tag_str
         .split(",")
         .map(|str| Uuid::parse_str(&str).unwrap())
         .collect::<Vec<Uuid>>();
 
-    let bookmarks = web::block(move || -> Result<Vec<Bookmark>, DbError> {
+    let limit: i64 = query_params.limit.unwrap_or(25);
+    let offset: i64 = (query_params.page.unwrap_or(1) - 1) * limit;
+
+    let bookmarks: Vec<Bookmark> = web::block(move || -> Result<Vec<Bookmark>, DbError> {
         use crate::db::schema::bookmarks::dsl::*;
 
         let mut conn = pool.get()?;
 
         let res: Vec<Bookmark> = bookmarks.load::<models::Bookmark>(&mut conn)?;
 
-        let out: Vec<Bookmark> = res
+        let mut out: Vec<Bookmark> = res
             .into_iter()
             .filter(|b| {
                 let bookmark_tags: Vec<Uuid> = b
@@ -114,7 +120,15 @@ async fn filter_bookmarks_by_tag(
             })
             .collect::<Vec<Bookmark>>();
 
-        Ok(out)
+        if out.len() as i64 <= offset {
+            return Ok(vec![]);
+        }
+
+        let end: i64 = if out.len() as i64 > offset + limit { offset + limit } else { (out.len() - 1) as i64};
+
+        let clipped_out: Vec<Bookmark> = out.drain((offset as usize)..(end as usize)).collect();
+
+        Ok(clipped_out)
     })
     .await?
     .map_err(error::ErrorInternalServerError)?;

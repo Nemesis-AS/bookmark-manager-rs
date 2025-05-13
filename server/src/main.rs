@@ -1,9 +1,11 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 
 use crate::api::register as regiser_api;
+use crate::routes::register as register_routes;
 
 mod api;
 mod db;
+mod routes;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -16,6 +18,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .wrap(Logger::default())
             .service(web::scope("/api/v1").configure(regiser_api))
+            .service(web::scope("").configure(register_routes))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
